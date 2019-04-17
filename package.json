@@ -26,7 +26,6 @@
   },
   "scripts": {
     "build": "rollup -c",
-    "precommit": "lint-staged",
     "start": "react-scripts start"
   },
   "lint-staged": {
@@ -48,5 +47,10 @@
   ],
   "files": [
     "dist"
-  ]
+  ],
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  }
 }
