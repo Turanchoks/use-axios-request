@@ -1,6 +1,6 @@
 {
   "name": "use-axios-request",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "repository": "git@github.com:Turanchoks/use-axios-request.git",
   "author": "Pavel Turanchoks <ipuncho@gmail.com>",
   "main": "dist/use-axios-request.cjs.js",
@@ -26,7 +26,8 @@
   },
   "scripts": {
     "build": "rollup -c",
-    "start": "react-scripts start"
+    "start": "react-scripts start",
+    "prepublishOnly": "yarn run build"
   },
   "lint-staged": {
     "src/**/*.{ts,tsx}": [
