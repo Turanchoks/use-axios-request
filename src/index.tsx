@@ -4,20 +4,11 @@ import { useAxiosRequest } from './useAxiosRequest';
 
 function App() {
   const [username, setUsername] = React.useState('Turanchoks');
-  const [url, setConfig] = React.useState(
-    `https://api.github.com/users/Turanchoks`
-  );
+  const [url, setConfig] = React.useState<any>(null);
 
   const { state, update } = useAxiosRequest<{
     login: string;
-  }>(
-    React.useMemo(() => {
-      return {
-        url,
-        cache: true,
-      };
-    }, [url])
-  );
+  }>(url);
 
   return (
     <div className="App">
@@ -25,6 +16,8 @@ function App() {
         {username} id is:{' '}
         {state.isFetching
           ? 'Loading'
+          : state.error
+          ? state.error.message
           : state.data == null
           ? 'None'
           : state.data.login}

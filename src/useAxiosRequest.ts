@@ -8,23 +8,23 @@ const Cache = new Map();
 //   window.__axiosRequestCache = Cache;
 // }
 
-type ConfigType = AxiosRequestConfig | string;
+type ConfigType = AxiosRequestConfig | string | null | void;
 
 export function useAxiosRequestEffect({
   config,
   cb,
   errorCb,
-  polls,
+  requestId,
 }: {
-  config: ConfigType | null;
+  config: ConfigType;
   cb: (data: AxiosResponse['data']) => void;
   errorCb: (error: AxiosError) => void;
-  polls: number;
+  requestId: number;
 }) {
   React.useEffect(() => {
     if (config) {
       const source = Axios.CancelToken.source();
-      const axiosConfig: ConfigType = {
+      const axiosConfig: AxiosRequestConfig = {
         cancelToken: source.token,
       };
 
@@ -48,7 +48,7 @@ export function useAxiosRequestEffect({
 
       return source.cancel;
     }
-  }, [config, cb, errorCb, polls]);
+  }, [config, cb, errorCb, requestId]);
 }
 
 type State<D> = {
@@ -57,7 +57,7 @@ type State<D> = {
   prevConfig: ConfigType;
   isFetching: boolean;
   error: Error | null;
-  polls: number;
+  requestId: number;
 };
 
 function init<D>({
@@ -71,16 +71,15 @@ function init<D>({
   data: D;
   prevConfig: ConfigType;
 }): State<D> {
-  const sendRequest = !!config;
-  const cacheKey = sendRequest && cache ? getCacheKeyFromConfig(config) : null;
+  const cacheKey = !!config && cache ? getCacheKeyFromConfig(config) : null;
   const hasCache = cacheKey && Cache.has(cacheKey);
 
   return {
     data: hasCache ? Cache.get(cacheKey) : data,
-    isFetching: sendRequest && !hasCache,
+    isFetching: !!config && !hasCache,
     config,
     error: null,
-    polls: 0,
+    requestId: 1,
     prevConfig,
   };
 }
@@ -147,7 +146,7 @@ function reducer<D>(state: State<D>, action: Action<D>): State<D> {
         ...state,
         isFetching: true,
         error: null,
-        polls: state.polls + 1,
+        requestId: state.requestId + 1,
       };
     case 'fetched':
       return {
@@ -167,25 +166,26 @@ function reducer<D>(state: State<D>, action: Action<D>): State<D> {
   }
 }
 
-const getCacheKeyFromConfig = (config: ConfigType) => {
+const getCacheKeyFromConfig = (config: AxiosRequestConfig | string) => {
   return typeof config === 'string'
     ? config
     : buildURL(config.url, config.params);
 };
 
-type UseAxiosRequestConfigType = ConfigType & {
+type UseAxiosRequestOptionsType = {
   pollInterval?: number;
   cache?: boolean;
 };
 
-export function useAxiosRequest<D>(config: UseAxiosRequestConfigType = {}) {
-  const { pollInterval = 0, cache = false } = config;
-
+export function useAxiosRequest<D>(
+  axiosConfig: ConfigType | null | void,
+  { cache = false, pollInterval = 0 }: UseAxiosRequestOptionsType = {}
+) {
   const initialValue = {
-    config,
+    config: axiosConfig,
     cache,
     data: null,
-    prevConfig: config,
+    prevConfig: axiosConfig,
   };
 
   const [state, dispatch] = React.useReducer(
@@ -241,9 +241,8 @@ export function useAxiosRequest<D>(config: UseAxiosRequestConfigType = {}) {
     });
   }, [dispatch]);
 
-  if (state.prevConfig !== config) {
-    console.log(state.prevConfig, config);
-    updateConfig(config);
+  if (state.prevConfig !== axiosConfig) {
+    updateConfig(axiosConfig);
   }
 
   React.useEffect(() => {
@@ -265,7 +264,7 @@ export function useAxiosRequest<D>(config: UseAxiosRequestConfigType = {}) {
     config: state.isFetching ? (state.config as ConfigType) : null,
     cb: onSuccess,
     errorCb: onError,
-    polls: state.polls,
+    requestId: state.requestId,
   });
 
   return {
@@ -281,7 +280,7 @@ export function useAxiosRequestRender({
   renderLoading,
   renderError,
 }: {
-  config: UseAxiosRequestConfigType;
+  config: ConfigType;
   render: (axiosConfig: ReturnType<typeof useAxiosRequest>) => React.ReactNode;
   renderLoading: (
     axiosConfig: ReturnType<typeof useAxiosRequest>
@@ -292,7 +291,7 @@ export function useAxiosRequestRender({
 }) {
   const axiosRequest = useAxiosRequest(config);
 
-  if (axiosRequest.state.isFetching && axiosRequest.state.polls === 0) {
+  if (axiosRequest.state.isFetching && axiosRequest.state.requestId === 1) {
     return renderLoading(axiosRequest);
   }
 
