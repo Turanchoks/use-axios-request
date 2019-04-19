@@ -78,7 +78,7 @@ function App() {
   return (
     <div>
       <p>
-        {username} id is:{' '}
+        {username} login is:{' '}
         {state.isFetching
           ? 'Loading'
           : state.error
