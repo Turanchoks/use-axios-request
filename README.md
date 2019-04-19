@@ -23,8 +23,10 @@ const Component = () => {
     // see https://github.com/axios/axios#request-config
     // if ommited or null is provided no request is sent
     config,
-    // options.pollInterval - how often re-fetch with current axios config
-    // options.cache - should use cache. Internal axios buildURL is used
+    // options.pollInterval: number - how often re-fetch with current axios config
+    // options.cache: boolean - should use cache. Internal axios buildURL is used
+    // options.onSuccess: (response.data) => void - callback called on successful request
+    // options.error: (error) => void - callback called on error request
     // to generate a cache key.
     options
   );
