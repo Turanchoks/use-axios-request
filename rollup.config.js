@@ -4,13 +4,16 @@ import pkg from './package.json';
 
 export default {
   input: './src/useAxiosRequest.ts',
+  external: Object.keys(pkg.peerDependencies || {}).concat(
+    'axios/lib/helpers/buildURL'
+  ),
   plugins: [
     typescript({
       tsconfigOverride: {
         compilerOptions: { declaration: true, isolatedModules: false },
       },
     }),
-    commonjs({ extensions: ['.js', '.ts'] }), // the ".ts" extension is required
+    commonjs({ extensions: ['.js', '.ts'] }),
   ],
   output: [
     {

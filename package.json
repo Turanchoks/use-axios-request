@@ -29,6 +29,11 @@
     "start": "react-scripts start",
     "prepublishOnly": "yarn run build"
   },
+  "peerDependencies": {
+    "react": "^16.8.6",
+    "react-dom": "^16.8.6",
+    "axios": "^0.18.0"
+  },
   "lint-staged": {
     "src/**/*.{ts,tsx}": [
       "prettier --single-quote --trailing-comma es5 --write",

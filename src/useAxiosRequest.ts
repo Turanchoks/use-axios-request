@@ -1,4 +1,5 @@
 import * as React from 'react';
+import * as ReactDOM from 'react-dom';
 import Axios, { AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import buildURL from 'axios/lib/helpers/buildURL';
 
@@ -143,21 +144,31 @@ function reducer<D>(state: State<D>, action: Action<D>): State<D> {
     }
     case 'poll':
       return {
-        ...state,
+        config: state.config,
+        data: state.data,
+        prevConfig: state.prevConfig,
+
         isFetching: true,
         error: null,
         requestId: state.requestId + 1,
       };
     case 'fetched':
       return {
-        ...state,
+        config: state.config,
+        prevConfig: state.prevConfig,
+        requestId: state.requestId,
+
         data: action.payload,
         isFetching: false,
         error: null,
       };
     case 'error':
       return {
-        ...state,
+        config: state.config,
+        prevConfig: state.prevConfig,
+        requestId: state.requestId,
+        data: state.data,
+
         isFetching: false,
         error: action.payload,
       };
@@ -172,14 +183,21 @@ const getCacheKeyFromConfig = (config: AxiosRequestConfig | string) => {
     : buildURL(config.url, config.params);
 };
 
-type UseAxiosRequestOptionsType = {
+type UseAxiosRequestOptionsType<D> = {
   pollInterval?: number;
   cache?: boolean;
+  onSuccess?: (data: D) => void;
+  onError?: (error: AxiosError) => void;
 };
 
 export function useAxiosRequest<D>(
   axiosConfig: ConfigType | null | void,
-  { cache = false, pollInterval = 0 }: UseAxiosRequestOptionsType = {}
+  {
+    cache = false,
+    pollInterval = 0,
+    onSuccess,
+    onError,
+  }: UseAxiosRequestOptionsType<D> = {}
 ) {
   const initialValue = {
     config: axiosConfig,
@@ -205,7 +223,7 @@ export function useAxiosRequest<D>(
     [dispatch, cache]
   );
 
-  const updateConfigManual = React.useCallback(
+  const dispatchManullySetConfig = React.useCallback(
     (config: ConfigType) => {
       dispatch({
         type: 'manually set config',
@@ -215,7 +233,7 @@ export function useAxiosRequest<D>(
     [dispatch, cache]
   );
 
-  const onSuccess = React.useCallback(
+  const dispatchFetched = React.useCallback(
     (data: D) => {
       dispatch({
         type: 'fetched',
@@ -225,7 +243,7 @@ export function useAxiosRequest<D>(
     [dispatch]
   );
 
-  const onError = React.useCallback(
+  const dispatchError = React.useCallback(
     (error: AxiosError) => {
       dispatch({
         type: 'error',
@@ -235,11 +253,39 @@ export function useAxiosRequest<D>(
     [dispatch]
   );
 
-  const poll = React.useCallback(() => {
+  const dispatchPoll = React.useCallback(() => {
     dispatch({
       type: 'poll',
     });
   }, [dispatch]);
+
+  const cb = React.useCallback(
+    (data: D) => {
+      if (typeof onSuccess === 'function') {
+        ReactDOM.unstable_batchedUpdates(() => {
+          dispatchFetched(data);
+          onSuccess(data);
+        });
+      } else {
+        dispatchFetched(data);
+      }
+    },
+    [dispatchFetched, onSuccess]
+  );
+
+  const errorCb = React.useCallback(
+    (error: AxiosError) => {
+      if (typeof onError === 'function') {
+        ReactDOM.unstable_batchedUpdates(() => {
+          dispatchError(error);
+          onError(error);
+        });
+      } else {
+        dispatchError(error);
+      }
+    },
+    [dispatchError, onError]
+  );
 
   if (state.prevConfig !== axiosConfig) {
     updateConfig(axiosConfig);
@@ -247,12 +293,12 @@ export function useAxiosRequest<D>(
 
   React.useEffect(() => {
     if (pollInterval > 0 && !state.isFetching) {
-      const timeoutId = setTimeout(poll, pollInterval);
+      const timeoutId = setTimeout(dispatchPoll, pollInterval);
       return () => {
         clearTimeout(timeoutId);
       };
     }
-  }, [state.isFetching, pollInterval, poll]);
+  }, [state.isFetching, pollInterval, dispatchPoll]);
 
   React.useEffect(() => {
     if (cache && state.config && !state.isFetching) {
@@ -262,20 +308,21 @@ export function useAxiosRequest<D>(
 
   useAxiosRequestEffect({
     config: state.isFetching ? (state.config as ConfigType) : null,
-    cb: onSuccess,
-    errorCb: onError,
+    cb,
+    errorCb,
     requestId: state.requestId,
   });
 
   return {
     state: state as State<D>,
-    refresh: poll,
-    update: updateConfigManual,
+    refresh: dispatchPoll,
+    update: dispatchManullySetConfig,
   };
 }
 
-export function useAxiosRequestRender({
+export function useAxiosRequestRender<D>({
   config,
+  options,
   render,
   renderLoading,
   renderError,
@@ -288,8 +335,9 @@ export function useAxiosRequestRender({
   renderError: (
     axiosConfig: ReturnType<typeof useAxiosRequest>
   ) => React.ReactNode;
+  options: UseAxiosRequestOptionsType<D>;
 }) {
-  const axiosRequest = useAxiosRequest(config);
+  const axiosRequest = useAxiosRequest<D>(config, options);
 
   if (axiosRequest.state.isFetching && axiosRequest.state.requestId === 1) {
     return renderLoading(axiosRequest);

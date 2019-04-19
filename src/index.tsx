@@ -1,6 +1,71 @@
 import * as React from 'react';
+import axios from 'axios';
 import ReactDOM from 'react-dom';
 import { useAxiosRequest } from './useAxiosRequest';
+
+// Simulate slower network
+axios.interceptors.response.use(
+  response =>
+    new Promise(resolve => {
+      setTimeout(() => {
+        resolve(response);
+      }, 1000);
+    }),
+  error => Promise.reject(error)
+);
+
+const Child = () => {
+  const [visible, setVisible] = React.useState(false);
+
+  const close = React.useCallback(() => {
+    setVisible(false);
+  }, [setVisible]);
+
+  const {
+    state: { isFetching, data, error },
+    update,
+  } = useAxiosRequest<{
+    login: string;
+  }>(null, {
+    onSuccess: close,
+    onError: close,
+  });
+
+  console.log('Child render');
+  React.useEffect(() => {
+    console.log('Child commit');
+  });
+
+  return (
+    <div>
+      <p>login: {data ? data.login : error ? error.message : 'Not fetched'}</p>
+      <p>
+        <button onClick={() => setVisible(!visible)}>Toggle modal</button>
+      </p>
+      {visible && (
+        <div
+          style={{
+            opacity: isFetching ? 0.4 : 1,
+            display: 'inline-block',
+            border: '1px solid black',
+            padding: 15,
+          }}
+        >
+          <h3>Modal</h3>
+          <p>Some random text</p>
+          <button
+            onClick={() => {
+              update(`https://api.github.com/users/Turanchoks`);
+            }}
+            disabled={isFetching}
+          >
+            {isFetching ? 'Loading' : 'Send Request'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
 
 function App() {
   const [username, setUsername] = React.useState('Turanchoks');
@@ -11,7 +76,7 @@ function App() {
   }>(url);
 
   return (
-    <div className="App">
+    <div>
       <p>
         {username} id is:{' '}
         {state.isFetching
@@ -41,6 +106,10 @@ function App() {
       >
         Update config outside
       </button>
+
+      <hr />
+
+      <Child />
     </div>
   );
 }
