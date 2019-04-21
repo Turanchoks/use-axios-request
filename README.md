@@ -1,22 +1,95 @@
-# use-axios-request
+# use-axios-request :bulb:
 
 ![npm-version](https://img.shields.io/npm/v/use-axios-request.svg?maxAge=2592000)
 
-React Hooks for axios
+**Data fetching is easy with React Hooks for axios!**
+
+## Features
+
+Make [XMLHttpRequests](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest)
+including all features from [axios](https://github.com/axios/axios#features)
+
+Several more nice features:
+
+- Cancel a request when it makes sense: component is unmounted, the same new request is started by the same `Component`. You don't need to cancel request manually.
+- Cache a response if it's specified with `cache` option.
+- Polling data with `pollInterval` option.
+- Re-fetch data with the same config.
+- Call functions on successfull and error response with `onSuccess` and `error` options.
+
+## Installing
+
+Using npm:
+
+```bash
+$ npm install use-axios-request
+```
+
+Using yarn:
+
+```bash
+$ yarn add use-axios-request
+```
+
+## Example
+
+Performing a `GET` request
+
+```js
+import React from "react";
+import { useAxiosRequest } from "./useAxiosRequest";
+
+const Avatar = ({ username }) => {
+  const { state } = useAxiosRequest(`https://api.github.com/users/${username}`);
+  if (state.isFetching) return "Loading";
+  if (state.error) return state.error.message || "Error";
+  if (!state.data) return null;
+
+  return <img src={state.data.avatar_url} alt="avatar" />;
+};
+```
+
+Performing a `POST` request
+
+```js
+import React from "react";
+import { useAxiosRequest } from "./useAxiosRequest";
+
+const NewIssue = ({ title, body, owner, repo }) => {
+  const { state, update } = useAxiosRequest();
+
+  return (
+    <button
+      disabled={state.isFetching}
+      onClick={() => {
+      update({
+        url: `https://api.github.com/repos/${owner}/${repo}/issues`
+        method: 'post'
+        data: {
+          title,
+          body,
+        }
+      })
+    }}>
+      Submit New Issue
+    </button>
+  );
+};
+```
 
 ## API
 
 Performing a `GET` request
 
 ```js
-import { useAxiosRequest } from './useAxiosRequest';
+import { useAxiosRequest } from "./useAxiosRequest";
 
 type DataType = {
-  id: string,
+  id: string
 };
 
 const Component = () => {
-  const [config, setConfig] = React.useState('http://example.com');
+  const [config, setConfig] = React.useState("http://example.com");
 
   const { state, update, refresh } = useAxiosRequest(
     // Axios config that is directly passed to axios() function
@@ -51,3 +124,7 @@ const Component = () => {
   refresh;
 };
 ```
+
+## License
+
+MIT
