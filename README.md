@@ -79,8 +79,6 @@ const NewIssue = ({ title, body, owner, repo }) => {
 
 ## API
 
-Performing a `GET` request
-
 ```js
 import { useAxiosRequest } from "./useAxiosRequest";
 
