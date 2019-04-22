@@ -1,6 +1,7 @@
 # use-axios-request :bulb:
 
 ![npm-version](https://img.shields.io/npm/v/use-axios-request.svg?maxAge=2592000)
+![npm type definitions](https://img.shields.io/npm/types/use-axios-request.svg)
 
 **Data fetching is easy with React Hooks for axios!**
 
@@ -37,7 +38,7 @@ Performing a `GET` request
 
 ```js
 import React from "react";
-import { useAxiosRequest } from "./useAxiosRequest";
+import { useAxiosRequest } from "use-axios-request";
 
 const Avatar = ({ username }) => {
   const { state } = useAxiosRequest(`https://api.github.com/users/${username}`);
@@ -53,7 +54,7 @@ Performing a `POST` request
 
 ```js
 import React from "react";
-import { useAxiosRequest } from "./useAxiosRequest";
+import { useAxiosRequest } from "use-axios-request";
 
 const NewIssue = ({ title, body, owner, repo }) => {
   const { state, update } = useAxiosRequest();
@@ -80,16 +81,18 @@ const NewIssue = ({ title, body, owner, repo }) => {
 ## API
 
 ```js
-import { useAxiosRequest } from "./useAxiosRequest";
+import { useAxiosRequest } from "use-axios-request";
 
-type DataType = {
-  id: string
+// TypeScript annotation for response data
+type DataTypeResponse = {
+  id: string;
+  value: string;
 };
 
 const Component = () => {
   const [config, setConfig] = React.useState("http://example.com");
 
-  const { state, update, refresh } = useAxiosRequest(
+  const { state, update, refresh } = useAxiosRequest<DataTypeResponse>(
     // Axios config that is directly passed to axios() function
     // see https://github.com/axios/axios#request-config
     // if ommited or null is provided no request is sent
