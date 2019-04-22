@@ -12,11 +12,13 @@ including all features from [axios](https://github.com/axios/axios#features)
 
 Several more nice features:
 
-- Cancel a request when it makes sense: component is unmounted, the same new request is started by the same `Component`. You don't need to cancel request manually.
-- Cache a response if it's specified with `cache` option.
-- Polling data with `pollInterval` option.
-- Re-fetch data with the same config.
-- Call functions on successfull and error response with `onSuccess` and `error` options.
+- Familiar API, axios under the hood
+- Request auto-cancellation (concurrent requests or when the component unmounts)
+- Cache
+- Polling
+- Render prop-like API
+- Fully typed (TS, Flow is coming)
+- Callbacks (`onSuccess`, `onError`) to derive state
 
 ## Installing
 
@@ -37,14 +39,19 @@ $ yarn add use-axios-request
 Performing a `GET` request
 
 ```js
-import React from "react";
-import { useAxiosRequest } from "use-axios-request";
+import React from 'react';
+import { useAxiosRequest } from 'use-axios-request';
 
 const Avatar = ({ username }) => {
   const { state } = useAxiosRequest(`https://api.github.com/users/${username}`);
-  if (state.isFetching) return "Loading";
-  if (state.error) return state.error.message || "Error";
-  if (!state.data) return null;
+
+  if (state.isFetching) {
+    return 'Loading';
+  }
+
+  if (state.error) {
+    return state.error.message || 'Error';
+  }
 
   return <img src={state.data.avatar_url} alt="avatar" />;
 };
@@ -80,8 +87,8 @@ const NewIssue = ({ title, body, owner, repo }) => {
 
 ## API
 
-```js
-import { useAxiosRequest } from "use-axios-request";
+```ts
+import { useAxiosRequest } from 'use-axios-request';
 
 // TypeScript annotation for response data
 type DataTypeResponse = {
@@ -90,41 +97,76 @@ type DataTypeResponse = {
 };
 
 const Component = () => {
-  const [config, setConfig] = React.useState("http://example.com");
+  const config = 'https://api.github.com/users/octocat';
+  // config is justAxios config that is directly passed to axios() function
+  // see https://github.com/axios/axios#request-config
+  // if omitted or null is provided no request is sent
 
-  const { state, update, refresh } = useAxiosRequest<DataTypeResponse>(
-    // Axios config that is directly passed to axios() function
-    // see https://github.com/axios/axios#request-config
-    // if ommited or null is provided no request is sent
-    config,
-    // options.pollInterval: number - how often re-fetch with current axios config
-    // options.cache: boolean - should use cache. Internal axios buildURL is used
-    // options.onSuccess: (response.data) => void - callback called on successful request
-    // options.error: (error) => void - callback called on error request
-    // to generate a cache key.
-    options
-  );
+  const options = {
+    // Milliseconds that determine how often should the data with the same config is polled.
+    // No polling occures if 0 is passed. Defaults to 0.
+    pollInterval: 0,
+    // Boolean. If true, response data will be cached. Internal axios buildURL is used to
+    // generate a cache key.
+    cache: false,
+    // A Callback that is called after a successful response
+    onSuccess: () => setShowModal(false),
+    // A Callback that is called after an error response
+    onError: () => setShowModal(false),
+  };
 
-  // response.data from latest request
-  state.data;
-
-  // is currently fetching
-  state.isFetching;
-
-  // error from latest request
-  state.error;
-
-  // how many requests have been sent with current config
-  // it increments if you call refresh or use polling
-  state.requestId;
-
-  // function that sets a new config and triggers a request
-  update;
-
-  // re-fetch with existing config
-  refresh;
+  const {
+    // state.data - response.data from latest request
+    // state.isFetching - is currently fetching
+    // state.error - error from latest request
+    // state.requestId - how many requests have been sent with current config
+    //                   it increments if you call refresh or use polling
+    state,
+    // function that sets a new config and triggers a request
+    update,
+    // re-fetch with existing config
+    refresh,
+  } = useAxiosRequest<DataTypeResponse>(config, options);
 };
 ```
+
+## Notes
+
+- It's possible to use both `update` method and passing a config as a first argument to the hook in a single component. Keep in mind that using `update` method does not make a component re-render the second time while passing a new config as argument does trigger a second render.
+- If you use both methods simultaneously (`update` and passing a config) you might bump into something like this:
+
+```js
+const Component = () => {
+  const [config, setConfig] = React.useState(
+    'https://api.github.com/users/octocat'
+  );
+  const { update } = useAxiosRequest(config);
+
+  // If you click on 'Use update button', a new request is sent.
+  // Then if you lick on 'Use setConfig', nothing happens
+  // because literally nothing has changed - you've updated local state
+  // to the same value as it was before. useAxiosRequest hook remembers
+  // last passed config as an argument and dispatches a new request only
+  // if it actually changes.
+
+  return (
+    <div>
+      <button
+        onChange={() => update('https://api.github.com/users/Turanchoks')}
+      >
+        Use update
+      </button>
+      <button
+        onChange={() => setConfig('https://api.github.com/users/octocat')}
+      >
+        Use setConfig
+      </button>
+    </div>
+  );
+};
+```
+
+- If you use polling, it's likely that you don't want to show spinner whenever a polling request occurs. You can use `state.requestId` property which equals `1` on the very first request. So `state.isFetching && state.requestId === 1` is `true` when it's a initial request.
 
 ## License
 
