@@ -1,7 +1,11 @@
+import Axios from "axios";
 import { useAxiosRequest } from "./useAxiosRequest";
 import { renderHook, cleanup } from "react-hooks-testing-library";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  jest.clearAllMocks();
+});
 
 const initialConfig = {
   url: "https://github.com",
@@ -98,5 +102,19 @@ describe("useAxiosRequest", () => {
     await waitForNextUpdate();
     expect(result.current.state.error).toBeInstanceOf(Error);
     expect(result.current.state.error.message).toBe("Error message");
+  });
+  it("returns data from cache", async () => {
+    const { rerender, waitForNextUpdate } = renderHook(
+      config => useAxiosRequest(config, { cache: true }),
+      {
+        initialProps: initialConfig
+      }
+    );
+    await waitForNextUpdate();
+    rerender(newConfig);
+    await waitForNextUpdate();
+
+    rerender(initialConfig);
+    expect(Axios.mock.calls.length).toBe(2);
   });
 });
