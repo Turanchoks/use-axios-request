@@ -98,7 +98,7 @@ type DataTypeResponse = {
 
 const Component = () => {
   const config = 'https://api.github.com/users/octocat';
-  // config is justAxios config that is directly passed to axios() function
+  // config is just an Axios config that is directly passed to axios() function
   // see https://github.com/axios/axios#request-config
   // if omitted or null is provided no request is sent
 
