@@ -7,7 +7,6 @@
   "module": "dist/use-axios-request.es.js",
   "license": "MIT",
   "devDependencies": {
-    "@babel/preset-typescript": "^7.3.3",
     "@types/jest": "^24.0.11",
     "@types/node": "^11.13.4",
     "@types/react": "^16.8.13",
