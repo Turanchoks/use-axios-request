@@ -1,6 +1,6 @@
 {
   "name": "use-axios-request",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "repository": "git@github.com:Turanchoks/use-axios-request.git",
   "author": "Pavel Turanchoks <ipuncho@gmail.com>",
   "main": "dist/use-axios-request.cjs.js",
@@ -30,9 +30,9 @@
     "prepublishOnly": "yarn run build"
   },
   "peerDependencies": {
+    "axios": "^0.18.0",
     "react": "^16.8.6",
-    "react-dom": "^16.8.6",
-    "axios": "^0.18.0"
+    "react-dom": "^16.8.6"
   },
   "lint-staged": {
     "src/**/*.{ts,tsx}": [
