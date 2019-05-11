@@ -43,17 +43,19 @@ import React from 'react';
 import { useAxiosRequest } from 'use-axios-request';
 
 const Avatar = ({ username }) => {
-  const { state } = useAxiosRequest(`https://api.github.com/users/${username}`);
+  const { isFetching, error, data } = useAxiosRequest(
+    `https://api.github.com/users/${username}`
+  );
 
-  if (state.isFetching) {
+  if (isFetching) {
     return 'Loading';
   }
 
-  if (state.error) {
-    return state.error.message || 'Error';
+  if (error) {
+    return error.message || 'Error';
   }
 
-  return <img src={state.data.avatar_url} alt="avatar" />;
+  return <img src={data.avatar_url} alt="avatar" />;
 };
 ```
 
@@ -64,11 +66,11 @@ import React from "react";
 import { useAxiosRequest } from "use-axios-request";
 
 const NewIssue = ({ title, body, owner, repo }) => {
-  const { state, update } = useAxiosRequest();
+  const { isFetching, update } = useAxiosRequest();
 
   return (
     <button
-      disabled={state.isFetching}
+      disabled={isFetching}
       onClick={() => {
       update({
         url: `https://api.github.com/repos/${owner}/${repo}/issues`
@@ -116,14 +118,22 @@ const Component = () => {
   };
 
   const {
-    // state.data - response.data from latest request
-    // state.isFetching - is currently fetching
-    // state.error - error from latest request
-    // state.requestId - how many requests have been sent with current config
-    //                   it increments if you call refresh or use polling
-    state,
+    // response.data from latest request
+    data,
+
+    // is currently fetching
+    isFetching,
+
+    // error from latest request
+    error,
+
+    // how many requests have been sent with current config
+    // it increments if you call refresh or use polling
+    requestId,
+
     // function that sets a new config and triggers a request
     update,
+
     // re-fetch with existing config
     refresh,
   } = useAxiosRequest<DataTypeResponse>(config, options);
@@ -166,7 +176,7 @@ const Component = () => {
 };
 ```
 
-- If you use polling, it's likely that you don't want to show spinner whenever a polling request occurs. You can use `state.requestId` property which equals `1` on the very first request. So `state.isFetching && state.requestId === 1` is `true` when it's a initial request.
+- If you use polling, it's likely that you don't want to show spinner whenever a polling request occurs. You can use `requestId` property which equals `1` on the very first request. So `isFetching && requestId === 1` is `true` when it's a initial request.
 
 ## License
 
