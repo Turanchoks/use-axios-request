@@ -314,7 +314,10 @@ export function useAxiosRequest<D>(
   });
 
   return {
-    state: state as State<D>,
+    isFetching: state.isFetching,
+    requestId: state.requestId,
+    data: state.data as D,
+    error: state.error,
     refresh: dispatchPoll,
     update: dispatchManullySetConfig,
   };
@@ -339,11 +342,11 @@ export function useAxiosRequestRender<D>({
 }) {
   const axiosRequest = useAxiosRequest<D>(config, options);
 
-  if (axiosRequest.state.isFetching && axiosRequest.state.requestId === 1) {
+  if (axiosRequest.isFetching && axiosRequest.requestId === 1) {
     return renderLoading(axiosRequest);
   }
 
-  if (axiosRequest.state.error) {
+  if (axiosRequest.error) {
     return renderError(axiosRequest);
   }
 
