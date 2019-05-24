@@ -73,12 +73,12 @@ const NewIssue = ({ title, body, owner, repo }) => {
       disabled={isFetching}
       onClick={() => {
       update({
-        url: `https://api.github.com/repos/${owner}/${repo}/issues`
-        method: 'post'
+        url: `https://api.github.com/repos/${owner}/${repo}/issues`,
+        method: 'post',
         data: {
           title,
           body,
-        }
+        },
       })
     }}>
       Submit New Issue
