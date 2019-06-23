@@ -157,7 +157,7 @@ const MyComponent = props => {
   return <div>{data}</div>;
 };
 ```
-It will cause an infinite loop, because `useAxiosRequest` will get a new object after every render.
+It will cause an infinite loop because `useAxiosRequest` will get a new object after every render.
 You have two options to fix it:
 
 1) carry out your config in constant out of a Component
