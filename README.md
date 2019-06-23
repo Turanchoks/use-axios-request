@@ -139,6 +139,53 @@ const Component = () => {
   } = useAxiosRequest<DataTypeResponse>(config, options);
 };
 ```
+## Configuration
+
+`config` could be the following types:
+1) null or undefined
+2) string
+3) object
+
+`useAxiosRequest` will trigger a request for every a new non-nullable `config`. So the code below is buggy.
+
+```js
+const MyComponent = props => {
+  const { data } = useAxiosRequest({
+    url: '/api',
+    params: { param1: 'param1' },
+  });
+  return <div>{data}</div>;
+};
+```
+It will cause an infinite loop, because `useAxiosRequest` will get a new object after every render.
+You have two options to fix it:
+
+1) carry out your config in constant out of a Component
+```js
+const CONFIG = {
+  url: '/api',
+  params: { param1: 'param1' },
+};
+const MyComponent = props => {
+  const { data } = useAxiosRequest(CONFIG);
+  return <div>{data}</div>;
+};
+```
+
+2) memoize the config if it depends on the props
+```js
+const MyComponent = props => {
+  const config = React.useMemo(
+    () => ({
+      url: '/api',
+      params: { param1: props.param1 },
+    }),
+    [props.param1]
+  );
+  const { data } = useAxiosRequest(config);
+  return <div>{data}</div>;
+};
+```
 
 ## Notes
 
