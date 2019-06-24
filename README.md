@@ -143,10 +143,10 @@ const Component = () => {
 
 `config` could be the following types:
 1) null or undefined
-2) string
-3) object
+2) string (url)
+3) object (axios config)
 
-`useAxiosRequest` will trigger a request for every a new non-nullable `config`. So the code below is buggy.
+`useAxiosRequest` triggers a request for every new non-nullable `config`. So the code below is buggy.
 
 ```js
 const MyComponent = props => {
@@ -157,10 +157,10 @@ const MyComponent = props => {
   return <div>{data}</div>;
 };
 ```
-It will cause an infinite loop because `useAxiosRequest` will get a new object after every render.
+It causes an infinite loop because `useAxiosRequest` gets a new object on every render.
 You have two options to fix it:
 
-1) carry out your config in constant out of a Component
+1) move the config outside the component
 ```js
 const CONFIG = {
   url: '/api',
@@ -172,7 +172,7 @@ const MyComponent = props => {
 };
 ```
 
-2) memoize the config if it depends on the props
+2) memoize the config if it depends on props
 ```js
 const MyComponent = props => {
   const config = React.useMemo(
