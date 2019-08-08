@@ -1,6 +1,6 @@
 {
   "name": "use-axios-request",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "repository": "git@github.com:Turanchoks/use-axios-request.git",
   "author": "Pavel Turanchoks <ipuncho@gmail.com>",
   "main": "dist/use-axios-request.cjs.js",
