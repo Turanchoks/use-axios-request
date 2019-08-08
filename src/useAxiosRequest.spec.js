@@ -1,10 +1,11 @@
 import Axios from 'axios';
-import { useAxiosRequest } from './useAxiosRequest';
-import { renderHook, cleanup } from 'react-hooks-testing-library';
+import { renderHook, act } from '@testing-library/react-hooks';
+import { useAxiosRequest, Cache, CacheRequests } from './useAxiosRequest';
 
 afterEach(() => {
-  cleanup();
   jest.clearAllMocks();
+  Cache.clear();
+  CacheRequests.clear();
 });
 
 const initialConfig = {
@@ -61,7 +62,10 @@ describe('useAxiosRequest', () => {
     expect(result.current.isFetching).toBe(true);
 
     await waitForNextUpdate();
-    result.current.refresh();
+
+    act(() => {
+      result.current.refresh();
+    });
 
     expect(result.current.requestId).toBe(2);
     expect(result.current.isFetching).toBe(true);
@@ -79,7 +83,9 @@ describe('useAxiosRequest', () => {
     await waitForNextUpdate();
     expect(result.current.data).toEqual(initialConfig.url);
 
-    result.current.update(newConfig);
+    act(() => {
+      result.current.update(newConfig);
+    });
 
     await waitForNextUpdate();
     expect(result.current.data).toEqual(newConfig.url);
@@ -172,5 +178,25 @@ describe('useAxiosRequest', () => {
     rerender(initialConfig);
 
     expect(Axios).toHaveBeenCalledTimes(2);
+  });
+
+  it('reuses pending request if cache is true', async () => {
+    const hook1 = renderHook(
+      config => useAxiosRequest(config, { cache: true }),
+      {
+        initialProps: initialConfig,
+      }
+    );
+
+    const hook2 = renderHook(
+      config => useAxiosRequest(config, { cache: true }),
+      {
+        initialProps: initialConfig,
+      }
+    );
+
+    await Promise.all([hook1.waitForNextUpdate(), hook2.waitForNextUpdate()]);
+
+    expect(Axios).toHaveBeenCalledTimes(1);
   });
 });

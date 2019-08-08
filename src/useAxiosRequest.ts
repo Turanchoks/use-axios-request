@@ -1,56 +1,22 @@
-import * as React from 'react';
+import { useReducer, useEffect, useCallback, ReactNode, useMemo } from 'react';
 import * as ReactDOM from 'react-dom';
-import Axios, { AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
+import Axios, {
+  AxiosRequestConfig,
+  AxiosError,
+  AxiosResponse,
+  AxiosPromise,
+} from 'axios';
 import buildURL from 'axios/lib/helpers/buildURL';
 
-const Cache = new Map();
+export const Cache = new Map<string, AxiosResponse['data']>();
+export const CacheRequests = new Map<string, AxiosPromise>();
 
 // if (process.env.NODE_ENV === 'development') {
 //   window.__axiosRequestCache = Cache;
+//   window.__axiosRequestRequestsCache = CacheRequests;
 // }
 
 type ConfigType = AxiosRequestConfig | string | null | void;
-
-export function useAxiosRequestEffect({
-  config,
-  cb,
-  errorCb,
-  requestId,
-}: {
-  config: ConfigType;
-  cb: (data: AxiosResponse['data']) => void;
-  errorCb: (error: AxiosError) => void;
-  requestId: number;
-}) {
-  React.useEffect(() => {
-    if (config) {
-      const source = Axios.CancelToken.source();
-      const axiosConfig: AxiosRequestConfig = {
-        cancelToken: source.token,
-      };
-
-      if (typeof config === 'string') {
-        axiosConfig.url = config;
-        axiosConfig.method = 'GET';
-      } else {
-        Object.assign(axiosConfig, config);
-      }
-
-      Axios(axiosConfig)
-        .then(response => {
-          cb(response.data);
-        })
-        .catch(error => {
-          if (Axios.isCancel(error)) {
-            return;
-          }
-          errorCb(error);
-        });
-
-      return source.cancel;
-    }
-  }, [config, cb, errorCb, requestId]);
-}
 
 type State<D> = {
   config: ConfigType;
@@ -63,21 +29,20 @@ type State<D> = {
 
 function init<D>({
   config,
-  cache,
+  cacheKey,
   data,
   prevConfig,
 }: {
   config: ConfigType;
-  cache: boolean;
+  cacheKey: string | null;
   data: D;
   prevConfig: ConfigType;
 }): State<D> {
-  const cacheKey = !!config && cache ? getCacheKeyFromConfig(config) : null;
-  const hasCache = cacheKey && Cache.has(cacheKey);
+  const hasCache = typeof cacheKey === 'string' && Cache.has(cacheKey);
 
   return {
-    data: hasCache ? Cache.get(cacheKey) : data,
-    isFetching: !!config && !hasCache,
+    data: cacheKey && hasCache ? Cache.get(cacheKey) : data,
+    isFetching: config != null && !hasCache,
     config,
     error: null,
     requestId: 1,
@@ -90,14 +55,14 @@ type Action<D> =
       type: 'manually set config';
       payload: {
         config: ConfigType;
-        cache: boolean;
+        cacheKey: string | null;
       };
     }
   | {
       type: 'config changed';
       payload: {
         config: ConfigType;
-        cache: boolean;
+        cacheKey: string | null;
       };
     }
   | {
@@ -115,7 +80,7 @@ type Action<D> =
 function reducer<D>(state: State<D>, action: Action<D>): State<D> {
   switch (action.type) {
     case 'manually set config': {
-      const { config, cache } = action.payload;
+      const { config, cacheKey } = action.payload;
 
       if (config === state.config) {
         return state;
@@ -123,13 +88,13 @@ function reducer<D>(state: State<D>, action: Action<D>): State<D> {
 
       return init({
         config,
-        cache,
+        cacheKey,
         prevConfig: state.prevConfig,
         data: state.data,
       });
     }
     case 'config changed': {
-      const { config, cache } = action.payload;
+      const { config, cacheKey } = action.payload;
 
       if (config === state.prevConfig) {
         return state;
@@ -137,7 +102,7 @@ function reducer<D>(state: State<D>, action: Action<D>): State<D> {
 
       return init({
         config,
-        cache,
+        cacheKey,
         prevConfig: config,
         data: state.data,
       });
@@ -177,17 +142,21 @@ function reducer<D>(state: State<D>, action: Action<D>): State<D> {
   }
 }
 
-const getCacheKeyFromConfig = (config: AxiosRequestConfig | string) => {
-  return typeof config === 'string'
-    ? config
-    : buildURL(config.url, config.params);
-};
-
 type UseAxiosRequestOptionsType<D> = {
   pollInterval?: number;
   cache?: boolean;
   onSuccess?: (data: D) => void;
   onError?: (error: AxiosError) => void;
+};
+
+type UseAxiosRequestReturnType<D> = {
+  isFetching: boolean;
+  requestId: number;
+  data: D;
+  error: Error | null;
+  refresh: () => void;
+  update: (config: ConfigType) => void;
+  config: ConfigType;
 };
 
 export function useAxiosRequest<D>(
@@ -198,42 +167,52 @@ export function useAxiosRequest<D>(
     onSuccess,
     onError,
   }: UseAxiosRequestOptionsType<D> = {}
-) {
+): UseAxiosRequestReturnType<D> {
+  const cacheKey = useMemo(() => {
+    if (axiosConfig && cache) {
+      return typeof axiosConfig === 'string'
+        ? axiosConfig
+        : (buildURL(axiosConfig.url, axiosConfig.params) as string);
+    }
+
+    return null;
+  }, [axiosConfig, cache]);
+
   const initialValue = {
     config: axiosConfig,
-    cache,
+    cacheKey,
     data: null,
     prevConfig: axiosConfig,
   };
 
-  const [state, dispatch] = React.useReducer(
+  const [state, dispatch] = useReducer(
     reducer,
     initialValue,
     // FIX ME
     init as (iv: typeof initialValue) => State<D>
   );
 
-  const updateConfig = React.useCallback(
+  const updateConfig = useCallback(
     (config: ConfigType) => {
       dispatch({
         type: 'config changed',
-        payload: { config, cache },
+        payload: { config, cacheKey },
       });
     },
-    [dispatch, cache]
+    [dispatch, cacheKey]
   );
 
-  const dispatchManullySetConfig = React.useCallback(
+  const dispatchManullySetConfig = useCallback(
     (config: ConfigType) => {
       dispatch({
         type: 'manually set config',
-        payload: { config, cache },
+        payload: { config, cacheKey },
       });
     },
-    [dispatch, cache]
+    [dispatch, cacheKey]
   );
 
-  const dispatchFetched = React.useCallback(
+  const dispatchFetched = useCallback(
     (data: D) => {
       dispatch({
         type: 'fetched',
@@ -243,7 +222,7 @@ export function useAxiosRequest<D>(
     [dispatch]
   );
 
-  const dispatchError = React.useCallback(
+  const dispatchError = useCallback(
     (error: AxiosError) => {
       dispatch({
         type: 'error',
@@ -253,13 +232,13 @@ export function useAxiosRequest<D>(
     [dispatch]
   );
 
-  const dispatchPoll = React.useCallback(() => {
+  const dispatchPoll = useCallback(() => {
     dispatch({
       type: 'poll',
     });
   }, [dispatch]);
 
-  const cb = React.useCallback(
+  const cb = useCallback(
     (data: D) => {
       if (typeof onSuccess === 'function') {
         ReactDOM.unstable_batchedUpdates(() => {
@@ -273,7 +252,7 @@ export function useAxiosRequest<D>(
     [dispatchFetched, onSuccess]
   );
 
-  const errorCb = React.useCallback(
+  const errorCb = useCallback(
     (error: AxiosError) => {
       if (typeof onError === 'function') {
         ReactDOM.unstable_batchedUpdates(() => {
@@ -291,7 +270,7 @@ export function useAxiosRequest<D>(
     updateConfig(axiosConfig);
   }
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (pollInterval > 0 && !state.isFetching) {
       const timeoutId = setTimeout(dispatchPoll, pollInterval);
       return () => {
@@ -300,18 +279,56 @@ export function useAxiosRequest<D>(
     }
   }, [state.isFetching, pollInterval, dispatchPoll]);
 
-  React.useEffect(() => {
-    if (cache && state.config && !state.isFetching) {
-      Cache.set(getCacheKeyFromConfig(state.config), state.data);
-    }
-  }, [state.data, state.isFetching, state.config, cache]);
+  useEffect(() => {
+    if (state.config && state.isFetching) {
+      const source = Axios.CancelToken.source();
+      const axiosConfig: AxiosRequestConfig = {
+        cancelToken: source.token,
+      };
 
-  useAxiosRequestEffect({
-    config: state.isFetching ? (state.config as ConfigType) : null,
-    cb,
-    errorCb,
-    requestId: state.requestId,
-  });
+      if (typeof state.config === 'string') {
+        axiosConfig.url = state.config;
+        axiosConfig.method = 'GET';
+      } else {
+        Object.assign(axiosConfig, state.config);
+      }
+
+      let request;
+
+      if (cacheKey) {
+        const maybeRequest = CacheRequests.get(cacheKey);
+        if (maybeRequest) {
+          request = maybeRequest;
+        } else {
+          request = Axios(axiosConfig);
+          CacheRequests.set(cacheKey, request);
+        }
+      } else {
+        request = Axios(axiosConfig);
+      }
+
+      request
+        .then(({ data }) => {
+          cb(data);
+          if (cacheKey) {
+            Cache.set(cacheKey, data);
+          }
+        })
+        .catch(error => {
+          if (Axios.isCancel(error)) {
+            return;
+          }
+          errorCb(error);
+        })
+        .then(() => {
+          if (cacheKey) {
+            CacheRequests.delete(cacheKey);
+          }
+        });
+
+      return source.cancel;
+    }
+  }, [state.config, state.isFetching, cb, errorCb, state.requestId, cacheKey]);
 
   return {
     isFetching: state.isFetching,
@@ -320,6 +337,7 @@ export function useAxiosRequest<D>(
     error: state.error,
     refresh: dispatchPoll,
     update: dispatchManullySetConfig,
+    config: state.config,
   };
 }
 
@@ -331,14 +349,10 @@ export function useAxiosRequestRender<D>({
   renderError,
 }: {
   config: ConfigType;
-  render: (axiosConfig: ReturnType<typeof useAxiosRequest>) => React.ReactNode;
-  renderLoading: (
-    axiosConfig: ReturnType<typeof useAxiosRequest>
-  ) => React.ReactNode;
-  renderError: (
-    axiosConfig: ReturnType<typeof useAxiosRequest>
-  ) => React.ReactNode;
-  options: UseAxiosRequestOptionsType<D>;
+  render: (axiosConfigReturn: UseAxiosRequestReturnType<D>) => ReactNode;
+  renderLoading: (axiosConfigReturn: UseAxiosRequestReturnType<D>) => ReactNode;
+  renderError: (axiosConfigReturn: UseAxiosRequestReturnType<D>) => ReactNode;
+  options?: UseAxiosRequestOptionsType<D>;
 }) {
   const axiosRequest = useAxiosRequest<D>(config, options);
 
