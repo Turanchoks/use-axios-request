@@ -1,7 +1,7 @@
 import * as React from 'react';
 import axios from 'axios';
 import ReactDOM from 'react-dom';
-import { useAxiosRequest } from './useAxiosRequest';
+import { useAxiosRequest, useAxiosRequestRender } from './useAxiosRequest';
 
 // Simulate slower network
 axios.interceptors.response.use(
@@ -21,10 +21,7 @@ const Child = () => {
     setVisible(false);
   }, [setVisible]);
 
-  const {
-    state: { isFetching, data, error },
-    update,
-  } = useAxiosRequest<{
+  const { isFetching, data, error, update } = useAxiosRequest<{
     login: string;
   }>(null, {
     onSuccess: close,
@@ -67,11 +64,66 @@ const Child = () => {
   );
 };
 
+const CacheTestChild = ({ config }: { config: string | null }) => {
+  const children = useAxiosRequestRender<any>({
+    config,
+    options: {
+      cache: true,
+    },
+    render: ({ data, config }) => {
+      if (config == null) {
+        return <h3>Nothing yet</h3>;
+      }
+
+      return <pre>{data.login}</pre>;
+    },
+    renderLoading: () => {
+      return <h3>Loading</h3>;
+    },
+    renderError: () => {
+      return (
+        <h3
+          style={{
+            color: 'red',
+          }}
+        >
+          Error
+        </h3>
+      );
+    },
+  });
+
+  // https://github.com/Microsoft/TypeScript/issues/30108
+  return <React.Fragment>{children}</React.Fragment>;
+};
+
+const CacheTest = () => {
+  const [config, setConfig] = React.useState<string | null>(null);
+
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const onClick = () => {
+    if (inputRef.current) {
+      setConfig(inputRef.current.value);
+    }
+  };
+
+  return (
+    <div>
+      <h3>Current config: {config == null ? 'null' : config}</h3>
+      <input ref={inputRef} />
+      <button onClick={onClick}>Go!</button>
+      <CacheTestChild config={config} />
+      <CacheTestChild config={config} />
+      <CacheTestChild config={config} />
+    </div>
+  );
+};
+
 function App() {
   const [username, setUsername] = React.useState('Turanchoks');
   const [url, setConfig] = React.useState<any>(null);
 
-  const { state, update } = useAxiosRequest<{
+  const { isFetching, error, data, update } = useAxiosRequest<{
     login: string;
   }>(url);
 
@@ -79,13 +131,13 @@ function App() {
     <div>
       <p>
         {username} login is:{' '}
-        {state.isFetching
+        {isFetching
           ? 'Loading'
-          : state.error
-          ? state.error.message
-          : state.data == null
+          : error
+          ? error.message
+          : data == null
           ? 'None'
-          : state.data.login}
+          : data.login}
       </p>
       <input
         value={username}
@@ -110,6 +162,9 @@ function App() {
       <hr />
 
       <Child />
+      <hr />
+
+      <CacheTest />
     </div>
   );
 }

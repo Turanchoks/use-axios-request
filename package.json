@@ -7,6 +7,7 @@
   "module": "dist/use-axios-request.es.js",
   "license": "MIT",
   "devDependencies": {
+    "@testing-library/react-hooks": "^1.1.0",
     "@types/jest": "^24.0.11",
     "@types/node": "^11.13.4",
     "@types/react": "^16.8.13",
@@ -17,8 +18,8 @@
     "prettier": "^1.17.0",
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
-    "react-hooks-testing-library": "^0.4.1",
     "react-scripts": "2.1.8",
+    "react-test-renderer": "^16.8.6",
     "rollup": "^1.10.0",
     "rollup-plugin-commonjs": "^9.3.4",
     "rollup-plugin-typescript2": "^0.20.1",
@@ -43,7 +44,6 @@
     ]
   },
   "types": "dist/useAxiosRequest.d.ts",
-  "dependencies": {},
   "eslintConfig": {
     "extends": "react-app"
   },
