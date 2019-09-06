@@ -33,7 +33,7 @@ describe("useAxiosRequest", () => {
     const { result } = renderHook(useAxiosRequest);
     expect(result.current.data).toEqual(null);
     expect(result.current.isFetching).toEqual(false);
-    expect(result.current.error).toEqual("error");
+    expect(result.current.error).toEqual("error1");
     expect(result.current.requestId).toEqual(1);
   });
 
