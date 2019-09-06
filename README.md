@@ -5,7 +5,7 @@
 
 **Data fetching is easy with React Hooks for axios!**
 
-## Features
+## Features test
 
 Make [XMLHttpRequests](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest)
 including all features from [axios](https://github.com/axios/axios#features)
@@ -39,8 +39,8 @@ $ yarn add use-axios-request
 Performing a `GET` request
 
 ```js
-import React from 'react';
-import { useAxiosRequest } from 'use-axios-request';
+import React from "react";
+import { useAxiosRequest } from "use-axios-request";
 
 const Avatar = ({ username }) => {
   const { isFetching, error, data } = useAxiosRequest(
@@ -48,11 +48,11 @@ const Avatar = ({ username }) => {
   );
 
   if (isFetching) {
-    return 'Loading';
+    return "Loading";
   }
 
   if (error) {
-    return error.message || 'Error';
+    return error.message || "Error";
   }
 
   return <img src={data.avatar_url} alt="avatar" />;
@@ -72,15 +72,16 @@ const NewIssue = ({ title, body, owner, repo }) => {
     <button
       disabled={isFetching}
       onClick={() => {
-      update({
-        url: `https://api.github.com/repos/${owner}/${repo}/issues`,
-        method: 'post',
-        data: {
-          title,
-          body,
-        },
-      })
-    }}>
+        update({
+          url: `https://api.github.com/repos/${owner}/${repo}/issues`,
+          method: "post",
+          data: {
+            title,
+            body
+          }
+        });
+      }}
+    >
       Submit New Issue
     </button>
   );
@@ -90,7 +91,7 @@ const NewIssue = ({ title, body, owner, repo }) => {
 ## API
 
 ```ts
-import { useAxiosRequest } from 'use-axios-request';
+import { useAxiosRequest } from "use-axios-request";
 
 // TypeScript annotation for response data
 type DataTypeResponse = {
@@ -99,7 +100,7 @@ type DataTypeResponse = {
 };
 
 const Component = () => {
-  const config = 'https://api.github.com/users/octocat';
+  const config = "https://api.github.com/users/octocat";
   // config is just an Axios config that is directly passed to axios() function
   // see https://github.com/axios/axios#request-config
   // if omitted or null is provided no request is sent
@@ -114,7 +115,7 @@ const Component = () => {
     // A Callback that is called after a successful response
     onSuccess: () => setShowModal(false),
     // A Callback that is called after an error response
-    onError: () => setShowModal(false),
+    onError: () => setShowModal(false)
   };
 
   const {
@@ -135,36 +136,40 @@ const Component = () => {
     update,
 
     // re-fetch with existing config
-    refresh,
+    refresh
   } = useAxiosRequest<DataTypeResponse>(config, options);
 };
 ```
+
 ## Configuration
 
 `config` could be the following types:
-1) null or undefined
-2) string (url)
-3) object (axios config)
+
+1. null or undefined
+2. string (url)
+3. object (axios config)
 
 `useAxiosRequest` triggers a request for every new non-nullable `config`. So the code below is buggy.
 
 ```js
 const MyComponent = props => {
   const { data } = useAxiosRequest({
-    url: '/api',
-    params: { param1: 'param1' },
+    url: "/api",
+    params: { param1: "param1" }
   });
   return <div>{data}</div>;
 };
 ```
+
 It causes an infinite loop because `useAxiosRequest` gets a new object on every render.
 You have two options to fix it:
 
-1) move the config outside the component
+1. move the config outside the component
+
 ```js
 const CONFIG = {
-  url: '/api',
-  params: { param1: 'param1' },
+  url: "/api",
+  params: { param1: "param1" }
 };
 const MyComponent = props => {
   const { data } = useAxiosRequest(CONFIG);
@@ -172,13 +177,14 @@ const MyComponent = props => {
 };
 ```
 
-2) memoize the config if it depends on props
+2. memoize the config if it depends on props
+
 ```js
 const MyComponent = props => {
   const config = React.useMemo(
     () => ({
-      url: '/api',
-      params: { param1: props.param1 },
+      url: "/api",
+      params: { param1: props.param1 }
     }),
     [props.param1]
   );
@@ -195,7 +201,7 @@ const MyComponent = props => {
 ```js
 const Component = () => {
   const [config, setConfig] = React.useState(
-    'https://api.github.com/users/octocat'
+    "https://api.github.com/users/octocat"
   );
   const { update } = useAxiosRequest(config);
 
@@ -209,12 +215,12 @@ const Component = () => {
   return (
     <div>
       <button
-        onChange={() => update('https://api.github.com/users/Turanchoks')}
+        onChange={() => update("https://api.github.com/users/Turanchoks")}
       >
         Use update
       </button>
       <button
-        onChange={() => setConfig('https://api.github.com/users/octocat')}
+        onChange={() => setConfig("https://api.github.com/users/octocat")}
       >
         Use setConfig
       </button>
