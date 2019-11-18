@@ -1,6 +1,11 @@
 import Axios from 'axios';
 import { renderHook, act } from '@testing-library/react-hooks';
-import { useAxiosRequest, Cache, CacheRequests } from './useAxiosRequest';
+import {
+  useAxiosRequest,
+  Cache,
+  CacheRequests,
+  warmupCache,
+} from './useAxiosRequest';
 
 afterEach(() => {
   jest.clearAllMocks();
@@ -196,6 +201,30 @@ describe('useAxiosRequest', () => {
     );
 
     await Promise.all([hook1.waitForNextUpdate(), hook2.waitForNextUpdate()]);
+
+    expect(Axios).toHaveBeenCalledTimes(1);
+  });
+
+  it('reuses cache if it has been warmed up', async () => {
+    await warmupCache(initialConfig);
+
+    expect(Axios).toHaveBeenCalledTimes(1);
+
+    renderHook(config => useAxiosRequest(config, { cache: true }), {
+      initialProps: initialConfig,
+    });
+
+    expect(Axios).toHaveBeenCalledTimes(1);
+  });
+
+  it('reuses pending request if cache is warming up', async () => {
+    warmupCache(initialConfig);
+
+    expect(Axios).toHaveBeenCalledTimes(1);
+
+    renderHook(config => useAxiosRequest(config, { cache: true }), {
+      initialProps: initialConfig,
+    });
 
     expect(Axios).toHaveBeenCalledTimes(1);
   });
