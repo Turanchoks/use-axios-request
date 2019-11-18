@@ -1,7 +1,13 @@
 import * as React from 'react';
 import axios from 'axios';
 import ReactDOM from 'react-dom';
-import { useAxiosRequest, useAxiosRequestRender } from './useAxiosRequest';
+import {
+  useAxiosRequest,
+  useAxiosRequestRender,
+  warmupCache,
+} from './useAxiosRequest';
+
+warmupCache('https://api.github.com/users/Turanchoks');
 
 // Simulate slower network
 axios.interceptors.response.use(

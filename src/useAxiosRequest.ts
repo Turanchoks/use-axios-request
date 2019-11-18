@@ -78,7 +78,7 @@ type Action<D> =
       payload: AxiosError;
     };
 
-export function reducer<D>(state: State<D>, action: Action<D>): State<D> {
+function reducer<D>(state: State<D>, action: Action<D>): State<D> {
   switch (action.type) {
     case 'manually set config': {
       const { config, cacheKey } = action.payload;
@@ -200,40 +200,41 @@ function sendRequest<D>(
     request = Axios(axiosConfig);
   }
 
-  request
-    .then(({ data }) => {
-      if (cb) {
-        cb(data);
-      }
-      if (cacheKey) {
-        Cache.set(cacheKey, data);
-      }
-    })
-    .catch(error => {
-      if (Axios.isCancel(error)) {
-        return;
-      }
-      if (errorCb) {
-        errorCb(error);
-      }
-    })
-    .then(() => {
-      if (cacheKey) {
-        CacheRequests.delete(cacheKey);
-      }
-    });
-
-  return source.cancel;
+  return {
+    request: request
+      .then(({ data }) => {
+        if (cb) {
+          cb(data);
+        }
+        if (cacheKey) {
+          Cache.set(cacheKey, data);
+        }
+      })
+      .catch(error => {
+        if (Axios.isCancel(error)) {
+          return;
+        }
+        if (errorCb) {
+          errorCb(error);
+        }
+      })
+      .then(() => {
+        if (cacheKey) {
+          CacheRequests.delete(cacheKey);
+        }
+      }),
+    cancel: source.cancel,
+  };
 }
 
-export function warmupCache(axiosConfig: ConfigType): void {
+export function warmupCache(axiosConfig: ConfigType): Promise<any> {
   const cacheKey = getCacheKey(axiosConfig);
 
   if (Cache.has(cacheKey)) {
-    return;
+    return Promise.resolve();
   }
 
-  sendRequest(axiosConfig);
+  return sendRequest(axiosConfig).request;
 }
 
 export function useAxiosRequest<D>(
@@ -356,7 +357,7 @@ export function useAxiosRequest<D>(
 
   useEffect(() => {
     if (state.config && state.isFetching) {
-      return sendRequest<D>(state.config, cb, errorCb);
+      return sendRequest<D>(state.config, cb, errorCb).cancel;
     }
   }, [state.config, state.isFetching, cb, errorCb, state.requestId, cacheKey]);
 
