@@ -206,9 +206,10 @@ describe('useAxiosRequest', () => {
   });
 
   it('reuses cache if it has been warmed up', async () => {
-    await warmupCache(initialConfig);
+    warmupCache(initialConfig);
 
     expect(Axios).toHaveBeenCalledTimes(1);
+    await Axios.mock.results[0].value;
 
     renderHook(config => useAxiosRequest(config, { cache: true }), {
       initialProps: initialConfig,
@@ -217,7 +218,7 @@ describe('useAxiosRequest', () => {
     expect(Axios).toHaveBeenCalledTimes(1);
   });
 
-  it('reuses pending request if cache is warming up', async () => {
+  it('reuses pending request if cache is warming up', () => {
     warmupCache(initialConfig);
 
     expect(Axios).toHaveBeenCalledTimes(1);

@@ -227,14 +227,12 @@ function sendRequest<D>(
   };
 }
 
-export function warmupCache(axiosConfig: ConfigType): Promise<any> {
+export function warmupCache(axiosConfig: ConfigType) {
   const cacheKey = getCacheKey(axiosConfig);
 
-  if (Cache.has(cacheKey)) {
-    return Promise.resolve();
+  if (!Cache.has(cacheKey)) {
+    sendRequest(axiosConfig);
   }
-
-  return sendRequest(axiosConfig).request;
 }
 
 export function useAxiosRequest<D>(
