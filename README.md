@@ -72,15 +72,16 @@ const NewIssue = ({ title, body, owner, repo }) => {
     <button
       disabled={isFetching}
       onClick={() => {
-      update({
-        url: `https://api.github.com/repos/${owner}/${repo}/issues`,
-        method: 'post',
-        data: {
-          title,
-          body,
-        },
-      })
-    }}>
+        update({
+          url: `https://api.github.com/repos/${owner}/${repo}/issues`,
+          method: 'post',
+          data: {
+            title,
+            body
+          }
+        });
+      }}
+    >
       Submit New Issue
     </button>
   );
@@ -108,9 +109,11 @@ const Component = () => {
     // Milliseconds that determine how often should the data with the same config is polled.
     // No polling occures if 0 is passed. Defaults to 0.
     pollInterval: 0,
-    // Boolean. If true, response data will be cached. Internal axios buildURL is used to
-    // generate a cache key.
-    cache: false,
+    // Inspired by "Apollo GraphQL" client https://www.apollographql.com/
+    // 'no-cache' (default value) - it never returns cached data, it'll always make network request.
+    // 'cache-first' - it returns cached data OR will make network request.
+    // 'cache-and-network' - it returns cached data AND will make network request to refresh data.
+    cache: 'no-cache | cache-first | cache-and-network',
     // A Callback that is called after a successful response
     onSuccess: () => setShowModal(false),
     // A Callback that is called after an error response
@@ -139,6 +142,7 @@ const Component = () => {
   } = useAxiosRequest<DataTypeResponse>(config, options);
 };
 ```
+
 ## Configuration
 
 `config` could be the following types:
