@@ -33,17 +33,21 @@ function init<D>({
   cacheKey,
   data,
   prevConfig,
+  cachePolicy,
 }: {
   config: NullableConfigType;
   cacheKey: string | null;
   data: D;
   prevConfig: NullableConfigType;
+  cachePolicy: CachePolicy;
 }): State<D> {
   const hasCache = typeof cacheKey === 'string' && Cache.has(cacheKey);
 
   return {
     data: cacheKey && hasCache ? Cache.get(cacheKey) : data,
-    isFetching: config != null && !hasCache,
+    isFetching:
+      config != null &&
+      (!hasCache || (hasCache && cachePolicy === CachePolicy.CacheAndNetwork)),
     config,
     error: null,
     requestId: 1,
@@ -57,6 +61,7 @@ type Action<D> =
       payload: {
         config: NullableConfigType;
         cacheKey: string | null;
+        cachePolicy: CachePolicy;
       };
     }
   | {
@@ -64,6 +69,7 @@ type Action<D> =
       payload: {
         config: NullableConfigType;
         cacheKey: string | null;
+        cachePolicy: CachePolicy;
       };
     }
   | {
@@ -81,7 +87,7 @@ type Action<D> =
 function reducer<D>(state: State<D>, action: Action<D>): State<D> {
   switch (action.type) {
     case 'manually set config': {
-      const { config, cacheKey } = action.payload;
+      const { config, cacheKey, cachePolicy } = action.payload;
 
       if (config === state.config) {
         return state;
@@ -92,10 +98,11 @@ function reducer<D>(state: State<D>, action: Action<D>): State<D> {
         cacheKey,
         prevConfig: state.prevConfig,
         data: state.data,
+        cachePolicy,
       });
     }
     case 'config changed': {
-      const { config, cacheKey } = action.payload;
+      const { config, cacheKey, cachePolicy } = action.payload;
 
       if (config === state.prevConfig) {
         return state;
@@ -106,6 +113,7 @@ function reducer<D>(state: State<D>, action: Action<D>): State<D> {
         cacheKey,
         prevConfig: config,
         data: state.data,
+        cachePolicy,
       });
     }
     case 'poll':
@@ -143,9 +151,15 @@ function reducer<D>(state: State<D>, action: Action<D>): State<D> {
   }
 }
 
+export enum CachePolicy {
+  NoCache = 'no-cache',
+  CacheFirst = 'cache-first',
+  CacheAndNetwork = 'cache-and-network',
+}
+
 type UseAxiosRequestOptionsType<D> = {
   pollInterval?: number;
-  cache?: boolean;
+  cache?: CachePolicy;
   onSuccess?: (data: D) => void;
   onError?: (error: AxiosError) => void;
 };
@@ -153,7 +167,7 @@ type UseAxiosRequestOptionsType<D> = {
 type UseAxiosRequestReturnType<D> = {
   isFetching: boolean;
   requestId: number;
-  data: D;
+  data: D | void;
   error: Error | null;
   refresh: () => void;
   update: (config: ConfigType) => void;
@@ -238,15 +252,17 @@ export function warmupCache(axiosConfig: ConfigType) {
 export function useAxiosRequest<D>(
   axiosConfig: ConfigType | null | void,
   {
-    cache = false,
+    cache = CachePolicy.NoCache,
     pollInterval = 0,
     onSuccess,
     onError,
   }: UseAxiosRequestOptionsType<D> = {}
 ): UseAxiosRequestReturnType<D> {
   const cacheKey = useMemo(() => {
-    if (axiosConfig && cache) {
-      return getCacheKey(axiosConfig);
+    if (axiosConfig && cache !== CachePolicy.NoCache) {
+      return typeof axiosConfig === 'string'
+        ? axiosConfig
+        : (buildURL(axiosConfig.url, axiosConfig.params) as string);
     }
 
     return null;
@@ -255,7 +271,7 @@ export function useAxiosRequest<D>(
   const initialValue = {
     config: axiosConfig,
     cacheKey,
-    data: null,
+    data: undefined,
     prevConfig: axiosConfig,
   };
 
@@ -270,7 +286,7 @@ export function useAxiosRequest<D>(
     (config: NullableConfigType) => {
       dispatch({
         type: 'config changed',
-        payload: { config, cacheKey },
+        payload: { config, cacheKey, cachePolicy: cache },
       });
     },
     [dispatch, cacheKey]
@@ -280,7 +296,7 @@ export function useAxiosRequest<D>(
     (config: ConfigType) => {
       dispatch({
         type: 'manually set config',
-        payload: { config, cacheKey },
+        payload: { config, cacheKey, cachePolicy: cache },
       });
     },
     [dispatch, cacheKey]

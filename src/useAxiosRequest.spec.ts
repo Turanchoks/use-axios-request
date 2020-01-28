@@ -5,6 +5,7 @@ import {
   Cache,
   CacheRequests,
   warmupCache,
+  CachePolicy,
 } from './useAxiosRequest';
 
 afterEach(() => {
@@ -36,7 +37,7 @@ const errorConfig = {
 describe('useAxiosRequest', () => {
   it('does nothing without init config', () => {
     const { result } = renderHook(useAxiosRequest);
-    expect(result.current.data).toEqual(null);
+    expect(result.current.data).toEqual(undefined);
     expect(result.current.isFetching).toEqual(false);
     expect(result.current.error).toEqual(null);
     expect(result.current.requestId).toEqual(1);
@@ -168,41 +169,48 @@ describe('useAxiosRequest', () => {
     expect(onSuccess).toHaveBeenCalledWith(initialConfig.url);
   });
 
-  it('returns data from cache', async () => {
-    const { rerender, waitForNextUpdate } = renderHook(
-      config => useAxiosRequest(config, { cache: true }),
-      {
-        initialProps: initialConfig,
-      }
-    );
+  [
+    { policy: CachePolicy.CacheFirst, calledTimes: 2 },
+    { policy: CachePolicy.CacheAndNetwork, calledTimes: 3 },
+  ].forEach(({ policy, calledTimes }) => {
+    it(`returns data from cache if cache is ${policy} and make the proper number of requests`, async () => {
+      const { rerender, waitForNextUpdate } = renderHook(
+        config => useAxiosRequest(config, { cache: policy }),
+        {
+          initialProps: initialConfig,
+        }
+      );
 
-    await waitForNextUpdate();
-    rerender(newConfig);
+      await waitForNextUpdate();
+      rerender(newConfig);
 
-    await waitForNextUpdate();
-    rerender(initialConfig);
+      await waitForNextUpdate();
+      rerender(initialConfig);
 
-    expect(Axios).toHaveBeenCalledTimes(2);
+      expect(Axios).toHaveBeenCalledTimes(calledTimes);
+    });
   });
 
-  it('reuses pending request if cache is true', async () => {
-    const hook1 = renderHook(
-      config => useAxiosRequest(config, { cache: true }),
-      {
-        initialProps: initialConfig,
-      }
-    );
+  [CachePolicy.CacheFirst, CachePolicy.CacheAndNetwork].forEach(policy => {
+    it(`reuses pending request if cache is ${policy}`, async () => {
+      const hook1 = renderHook(
+        config => useAxiosRequest(config, { cache: policy }),
+        {
+          initialProps: initialConfig,
+        }
+      );
 
-    const hook2 = renderHook(
-      config => useAxiosRequest(config, { cache: true }),
-      {
-        initialProps: initialConfig,
-      }
-    );
+      const hook2 = renderHook(
+        config => useAxiosRequest(config, { cache: policy }),
+        {
+          initialProps: initialConfig,
+        }
+      );
 
-    await Promise.all([hook1.waitForNextUpdate(), hook2.waitForNextUpdate()]);
+      await Promise.all([hook1.waitForNextUpdate(), hook2.waitForNextUpdate()]);
 
-    expect(Axios).toHaveBeenCalledTimes(1);
+      expect(Axios).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('reuses cache if it has been warmed up', async () => {
