@@ -34,6 +34,10 @@ const errorConfig = {
   error: true,
 };
 
+function wait(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
 describe('useAxiosRequest', () => {
   it('does nothing without init config', () => {
     const { result } = renderHook(useAxiosRequest);
@@ -207,7 +211,8 @@ describe('useAxiosRequest', () => {
         }
       );
 
-      await Promise.all([hook1.waitForNextUpdate(), hook2.waitForNextUpdate()]);
+      await hook1.waitForNextUpdate();
+      await wait(0);
 
       expect(Axios).toHaveBeenCalledTimes(1);
     });
@@ -219,9 +224,12 @@ describe('useAxiosRequest', () => {
     expect(Axios).toHaveBeenCalledTimes(1);
     await Axios.mock.results[0].value;
 
-    renderHook(config => useAxiosRequest(config, { cache: true }), {
-      initialProps: initialConfig,
-    });
+    renderHook(
+      config => useAxiosRequest(config, { cache: CachePolicy.CacheFirst }),
+      {
+        initialProps: initialConfig,
+      }
+    );
 
     expect(Axios).toHaveBeenCalledTimes(1);
   });
@@ -231,10 +239,37 @@ describe('useAxiosRequest', () => {
 
     expect(Axios).toHaveBeenCalledTimes(1);
 
-    renderHook(config => useAxiosRequest(config, { cache: true }), {
-      initialProps: initialConfig,
-    });
+    renderHook(
+      config => useAxiosRequest(config, { cache: CachePolicy.CacheFirst }),
+      {
+        initialProps: initialConfig,
+      }
+    );
 
     expect(Axios).toHaveBeenCalledTimes(1);
+  });
+
+  ['mounted', 'unmounted'].forEach(v => {
+    const isUnmounted = v === 'unmounted';
+    it(`${isUnmounted ? 'not ' : ''}call cb if component is ${v}`, async () => {
+      const wrapper = ({ children }) => children;
+      const onSuccess = jest.fn();
+      const { unmount } = await renderHook(
+        config =>
+          useAxiosRequest(config, { onSuccess, cache: CachePolicy.CacheFirst }),
+        {
+          initialProps: { ...initialConfig, delay: 10 },
+          wrapper,
+        }
+      );
+
+      await wait(0);
+      if (isUnmounted) {
+        unmount();
+      }
+      await wait(20);
+
+      expect(onSuccess).toHaveBeenCalledTimes(isUnmounted ? 0 : 1);
+    });
   });
 });
