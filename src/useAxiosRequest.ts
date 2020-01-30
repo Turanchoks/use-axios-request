@@ -1,4 +1,11 @@
-import { useReducer, useEffect, useCallback, ReactNode, useMemo } from 'react';
+import {
+  useReducer,
+  useEffect,
+  useCallback,
+  ReactNode,
+  useMemo,
+  useRef,
+} from 'react';
 import * as ReactDOM from 'react-dom';
 import Axios, {
   AxiosRequestConfig,
@@ -183,7 +190,8 @@ function getCacheKey(axiosConfig: ConfigType) {
 function sendRequest<D>(
   config: ConfigType,
   cb?: (data: D) => void,
-  errorCb?: (error: AxiosError) => void
+  errorCb?: (error: AxiosError) => void,
+  isMountedRef?: React.MutableRefObject<boolean>
 ) {
   const source = Axios.CancelToken.source();
   const axiosConfig: AxiosRequestConfig = {
@@ -217,7 +225,7 @@ function sendRequest<D>(
   return {
     request: request
       .then(({ data }) => {
-        if (cb) {
+        if (cb && isMountedRef && isMountedRef.current) {
           cb(data);
         }
         if (cacheKey) {
@@ -228,7 +236,7 @@ function sendRequest<D>(
         if (Axios.isCancel(error)) {
           return;
         }
-        if (errorCb) {
+        if (errorCb && isMountedRef && isMountedRef.current) {
           errorCb(error);
         }
       })
@@ -258,6 +266,13 @@ export function useAxiosRequest<D>(
     onError,
   }: UseAxiosRequestOptionsType<D> = {}
 ): UseAxiosRequestReturnType<D> {
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
   const cacheKey = useMemo(() => {
     if (axiosConfig && cache !== CachePolicy.NoCache) {
       return typeof axiosConfig === 'string'
@@ -371,7 +386,10 @@ export function useAxiosRequest<D>(
 
   useEffect(() => {
     if (state.config && state.isFetching) {
-      return sendRequest<D>(state.config, cb, errorCb).cancel;
+      const request = sendRequest<D>(state.config, cb, errorCb, isMountedRef);
+      if (cache === CachePolicy.NoCache) {
+        return request.cancel;
+      }
     }
   }, [state.config, state.isFetching, cb, errorCb, state.requestId, cacheKey]);
 
