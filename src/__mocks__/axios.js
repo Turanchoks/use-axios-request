@@ -1,3 +1,5 @@
+let cancel = () => {};
+
 const Axios = jest.fn(config => {
   if (config.error) {
     return Promise.reject(new Error('Error message'));
@@ -20,6 +22,9 @@ const Axios = jest.fn(config => {
 Axios.CancelToken = {
   source: () => ({
     token: null,
+    cancel: () => {
+      cancel();
+    },
   }),
 };
 Axios.isCancel = () => false;
