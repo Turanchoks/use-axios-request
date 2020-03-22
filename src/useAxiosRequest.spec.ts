@@ -34,7 +34,7 @@ const errorConfig = {
   error: true,
 };
 
-function wait(ms) {
+function wait(ms: number) {
   return new Promise(r => setTimeout(r, ms));
 }
 
@@ -191,6 +191,10 @@ describe('useAxiosRequest', () => {
       await waitForNextUpdate();
       rerender(initialConfig);
 
+      if (calledTimes === 3) {
+        await waitForNextUpdate();
+      }
+
       expect(Axios).toHaveBeenCalledTimes(calledTimes);
     });
   });
@@ -204,12 +208,9 @@ describe('useAxiosRequest', () => {
         }
       );
 
-      const hook2 = renderHook(
-        config => useAxiosRequest(config, { cache: policy }),
-        {
-          initialProps: initialConfig,
-        }
-      );
+      renderHook(config => useAxiosRequest(config, { cache: policy }), {
+        initialProps: initialConfig,
+      });
 
       await hook1.waitForNextUpdate();
       await wait(0);
@@ -234,18 +235,19 @@ describe('useAxiosRequest', () => {
     expect(Axios).toHaveBeenCalledTimes(1);
   });
 
-  it('reuses pending request if cache is warming up', () => {
+  it('reuses pending request if cache is warming up', async () => {
     warmupCache(initialConfig);
 
     expect(Axios).toHaveBeenCalledTimes(1);
 
-    renderHook(
+    const { waitForNextUpdate } = renderHook(
       config => useAxiosRequest(config, { cache: CachePolicy.CacheFirst }),
       {
         initialProps: initialConfig,
       }
     );
 
+    await waitForNextUpdate();
     expect(Axios).toHaveBeenCalledTimes(1);
   });
 
@@ -254,7 +256,7 @@ describe('useAxiosRequest', () => {
     it(`${isUnmounted ? 'not ' : ''}call cb if component is ${v}`, async () => {
       const wrapper = ({ children }) => children;
       const onSuccess = jest.fn();
-      const { unmount } = await renderHook(
+      const { unmount, waitForNextUpdate } = await renderHook(
         config =>
           useAxiosRequest(config, { onSuccess, cache: CachePolicy.CacheFirst }),
         {
@@ -263,7 +265,12 @@ describe('useAxiosRequest', () => {
         }
       );
 
-      await wait(0);
+      if (isUnmounted) {
+        await wait(0);
+      } else {
+        await waitForNextUpdate();
+      }
+
       if (isUnmounted) {
         unmount();
       }
