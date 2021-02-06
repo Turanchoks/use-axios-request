@@ -137,7 +137,7 @@ describe('useAxiosRequest', () => {
 
     await waitForNextUpdate();
     expect(result.current.error).toBeInstanceOf(Error);
-    expect(result.current.error.message).toBe('Error message');
+    expect(result.current.error.message).toBe('Network Error');
   });
 
   it('recovers from error', async () => {

@@ -1,8 +1,9 @@
 let cancel = () => {};
+const axios = require('axios');
 
 const Axios = jest.fn(config => {
   if (config.error) {
-    return Promise.reject(new Error('Error message'));
+    return axios.get('q');
   }
 
   const response = {

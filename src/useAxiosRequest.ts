@@ -30,7 +30,7 @@ type State<D> = {
   data: D | void;
   prevConfig: NullableConfigType;
   isFetching: boolean;
-  error: Error | null;
+  error: AxiosError | null;
   requestId: number;
 };
 
@@ -174,7 +174,7 @@ type UseAxiosRequestReturnType<D> = {
   isFetching: boolean;
   requestId: number;
   data: D | void;
-  error: Error | null;
+  error: AxiosError | null;
   refresh: () => void;
   update: (config: ConfigType) => void;
   config: NullableConfigType;
